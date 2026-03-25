@@ -1,0 +1,18 @@
+# dataset
+CSI_Dataset_*
+test_*
+
+# zip
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tgz
+*.7z
+*.tbz2
+*.txz
+*.rar
+*.gz
+*.bz2
+*.xz
