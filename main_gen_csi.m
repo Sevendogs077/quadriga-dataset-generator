@@ -17,7 +17,7 @@ else
 end
 
 elements_per_chunk = config.static.samples_per_cond * config.static.num_snapshots * ...
-                     config.static.N_sc * config.static.N_rx * config.static.N_tx;
+                     config.static.N_sc * config.static.num_ue * config.static.N_tx;
 chunk_raw_MB = (elements_per_chunk * bytes_per_elem) / (1024^2);
 total_raw_MB = chunk_raw_MB * num_conditions;
 
