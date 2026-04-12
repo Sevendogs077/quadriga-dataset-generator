@@ -206,7 +206,7 @@ for cond = 1 : num_conditions
     
     fprintf('\n');
 
-    H_chunk = cast(H_compute_chunk, config.static.save_precision);
+    H = cast(H_compute_chunk, config.static.save_precision);
     
     % 文件名
     safe_scen_str = strrep(current_scen_str, '3GPP_38.901_', ''); 
@@ -218,11 +218,11 @@ for cond = 1 : num_conditions
     chunk_filename = sprintf('cond%03d_data_%s_v%dkmh.mat', cond, safe_scen_str, current_v_kmh);
     chunk_filepath = fullfile(dataset_dir, chunk_filename);
     
-    chunk_info = table2struct(task_list(cond, :));
-    chunk_info.samples_generated = config.static.samples_per_cond;
-    chunk_info.precision = config.static.save_precision;
+    info = table2struct(task_list(cond, :));
+    info.samples_generated = config.static.samples_per_cond;
+    info.precision = config.static.save_precision;
     
-    save(chunk_filepath, 'H_chunk', 'chunk_info', '-v7.3');
+    save(chunk_filepath, 'H', 'info', '-v7.3');
     fprintf('\n\n   已保存: %s \n', chunk_filename);
 end
 
