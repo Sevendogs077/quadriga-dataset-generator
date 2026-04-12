@@ -18,11 +18,11 @@ end
 
 elements_per_chunk = config.static.samples_per_cond * config.static.num_snapshots * ...
                      config.static.N_sc * config.static.num_ue * config.static.N_tx;
-chunk_raw_MB = (elements_per_chunk * bytes_per_elem) / (1024^2);
-total_raw_MB = chunk_raw_MB * num_conditions;
+chunk_raw_GB = (elements_per_chunk * bytes_per_elem) / (1024^3);
+total_raw_GB = chunk_raw_GB * num_conditions;
 
 
-fprintf('数据规模: 单个块约 %.2f MB | 总计约 %.2f MB\n\n', chunk_raw_MB, total_raw_MB);
+fprintf('数据规模: 单个块约 %.2f GB | 总计约 %.2f GB\n\n', chunk_raw_GB, total_raw_GB);
 disp('任务清单:');
 disp(task_list(1:height(task_list), :)); 
 
@@ -86,15 +86,27 @@ for cond = 1 : num_conditions
     current_v_ms     = current_v_kmh / 3.6;
     
     fprintf('\n>> %d/%d: [%s | %d km/h] ...\n', cond, num_conditions, current_scen_str, current_v_kmh);
-            
-    chunk_sz = [config.static.samples_per_cond, ... % 样本数
-                config.static.num_ue, ...           % 用户数
-                config.static.num_snapshots, ...    % 时间快照数
-                config.static.N_sc, ...             % 子载波数
-                config.static.N_tx];                % 发射天线数
-
-    H_compute_chunk = complex(zeros(chunk_sz, config.static.compute_precision), 0);
     
+    safe_scen_str = strrep(current_scen_str, '3GPP_38.901_', ''); 
+    safe_scen_str = strrep(safe_scen_str, ' ', '_');
+    safe_scen_str = strrep(safe_scen_str, '/', '_');
+    safe_scen_str = strrep(safe_scen_str, '\', '_');
+    safe_scen_str = strrep(safe_scen_str, ':', '_');
+    
+    chunk_filename = sprintf('cond%03d_data_%s_v%dkmh.mat', cond, safe_scen_str, current_v_kmh);
+    chunk_filepath = fullfile(dataset_dir, chunk_filename);
+    
+    info = table2struct(task_list(cond, :));
+    info.samples_generated = config.static.samples_per_cond;
+    info.precision = config.static.save_precision;
+
+    m = matfile(chunk_filepath, 'Writable', true);
+    m.info = info; 
+    
+    m.H(config.static.samples_per_cond, config.static.num_ue, ...
+        config.static.num_snapshots, config.static.N_sc, config.static.N_tx) = ...
+        complex(zeros(1, config.static.save_precision), 0);
+   
     % 仿真参数实例化
     sim_params = qd_simulation_parameters;    
     sim_params.show_progress_bars = 0; % 关闭内置进度条
@@ -177,6 +189,9 @@ for cond = 1 : num_conditions
         [channel, ~] = layout.get_channels();
 
         clear ue_track; % 重置 ue_track
+        
+        temp_sample_H = complex(zeros(1, config.static.num_ue, config.static.num_snapshots, ...
+                                      config.static.N_sc, config.static.N_tx, config.static.save_precision), 0);
 
         % 提取频域响应
         for iter_ue = 1 : config.static.num_ue
@@ -200,29 +215,12 @@ for cond = 1 : num_conditions
                    'Error: 维度 %s 与预期 %s 不符！', mat2str(size(h)), mat2str(expected_dim));
             
             % 保存当前条件的当前样本
-            H_compute_chunk(iter_s, iter_ue, :, :, :) = h;
+            temp_sample_H(1, iter_ue, :, :, :) = cast(h, config.static.save_precision);
         end
+        m.H(iter_s, :, :, :, :) = temp_sample_H;
+        clear channel temp_sample_H h layout;
     end
-    
-    fprintf('\n');
 
-    H = cast(H_compute_chunk, config.static.save_precision);
-    
-    % 文件名
-    safe_scen_str = strrep(current_scen_str, '3GPP_38.901_', ''); 
-    safe_scen_str = strrep(safe_scen_str, ' ', '_');
-    safe_scen_str = strrep(safe_scen_str, '/', '_');
-    safe_scen_str = strrep(safe_scen_str, '\', '_');
-    safe_scen_str = strrep(safe_scen_str, ':', '_');
-    
-    chunk_filename = sprintf('cond%03d_data_%s_v%dkmh.mat', cond, safe_scen_str, current_v_kmh);
-    chunk_filepath = fullfile(dataset_dir, chunk_filename);
-    
-    info = table2struct(task_list(cond, :));
-    info.samples_generated = config.static.samples_per_cond;
-    info.precision = config.static.save_precision;
-    
-    save(chunk_filepath, 'H', 'info', '-v7.3');
     fprintf('\n\n   已保存: %s \n', chunk_filename);
 end
 
