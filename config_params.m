@@ -11,7 +11,7 @@ function config = config_params()
     config.static.num_ue = 10;                          % 用户数量
     
     config.static.compute_precision = 'double';         % 仿真精度
-    config.static.save_precision = 'double';            % 保存精度
+    config.static.save_precision = 'single';            % 保存精度
     
     % 信号参数
     config.static.center_freq_Hz = 2.4e9;               % 载波中心频率
